@@ -1,4 +1,0 @@
-# scrapy
-Practice on scrapy
-
-

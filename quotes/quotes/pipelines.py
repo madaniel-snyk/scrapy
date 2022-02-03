@@ -8,6 +8,6 @@
 from itemadapter import ItemAdapter
 
 
-class WorldClockPipeline:
+class QuotesPipeline:
     def process_item(self, item, spider):
         return item
