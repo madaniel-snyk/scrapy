@@ -1,9 +1,8 @@
 import scrapy
-from ..items import QuotesItem
+from ..items import QuotesItem, QuoteItemLoader
 
 
 class QuoteSpider(scrapy.Spider):
-
     name = "quotes"
     start_urls = ['https://quotes.toscrape.com/']
 
@@ -11,7 +10,6 @@ class QuoteSpider(scrapy.Spider):
 
         # Extract main page quotes
         for quote in response.css('div.quote'):
-
             quote_info = {
                 'quote': quote.css('span.text ::text').get(),
                 'author': quote.css('small.author ::text').get(),
@@ -47,7 +45,6 @@ class QuoteSpider(scrapy.Spider):
 
 
 class QuoteSpiderItem(scrapy.Spider):
-
     name = "quotes_item"
     start_urls = ['https://quotes.toscrape.com/']
 
@@ -56,7 +53,6 @@ class QuoteSpiderItem(scrapy.Spider):
 
         # Extract main page quotes
         for quote in response.css('div.quote'):
-
             quote_item['quote'] = quote.css('span.text ::text').get()
             quote_item['author'] = quote.css('small.author ::text').get()
             quote_item['tags'] = quote.css('a.tag ::text').getall()
@@ -83,3 +79,40 @@ class QuoteSpiderItem(scrapy.Spider):
         quote_item['description'] = response.css('div.author-description ::text').get()
 
         yield quote_item
+
+
+class QuoteSpiderItemEnhanced(scrapy.Spider):
+    name = "quotes_item_enhanced"
+    start_urls = ['https://quotes.toscrape.com/']
+
+    def parse(self, response, **kwargs):
+        # Extract main page quotes
+        for quote in response.css('div.quote'):
+            loader = QuoteItemLoader(item=QuotesItem(), selector=quote)
+
+            loader.add_css('quote', css='span.text ::text')
+            loader.add_css('author', css='small.author ::text')
+            loader.add_css('tags', css='a.tag ::text')
+            loader.add_css('about_link', css='a ::attr(href)')
+
+            # Build a full link for 'about' link
+            details_url = response.urljoin(loader.get_output_value('about_link'))
+
+            yield scrapy.Request(url=details_url, callback=self.parse_details, meta={'loader': loader})
+
+            # Checking if there's another page
+            next_page = response.css('li.next ::attr(href)').get()
+
+            if next_page:
+                # Continue scrapping the next page
+                yield response.follow(next_page, callback=self.parse)
+
+    @staticmethod
+    def parse_details(response, **kwargs):
+        loader = response.meta['loader']
+
+        loader.add_value('born_date', response.css('span.author-born-date ::text').get())
+        loader.add_value('born_location', response.css('span.author-born-location ::text').get())
+        loader.add_value('description', response.css('div.author-description ::text').get())
+
+        yield loader.load_item()
