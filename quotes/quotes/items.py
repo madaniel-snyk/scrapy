@@ -16,6 +16,6 @@ class QuotesItem(scrapy.Item):
 
 class QuoteItemLoader(ItemLoader):
     default_output_processor = TakeFirst()
-    default_input_processor = MapCompose(remove_tags)
+    default_input_processor = MapCompose(remove_tags, str.strip)
 
     tags_out = MapCompose()

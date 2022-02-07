@@ -98,7 +98,7 @@ class QuoteSpiderItemEnhanced(scrapy.Spider):
             # Build a full link for 'about' link
             details_url = response.urljoin(loader.get_output_value('about_link'))
 
-            yield scrapy.Request(url=details_url, callback=self.parse_details, meta={'loader': loader})
+            yield scrapy.Request(url=details_url, callback=self.parse_details, meta={'item': loader.load_item()})
 
             # Checking if there's another page
             next_page = response.css('li.next ::attr(href)').get()
@@ -109,10 +109,10 @@ class QuoteSpiderItemEnhanced(scrapy.Spider):
 
     @staticmethod
     def parse_details(response, **kwargs):
-        loader = response.meta['loader']
+        loader = QuoteItemLoader(item=response.meta['item'], selector=response.css('div.author-details'))
 
-        loader.add_value('born_date', response.css('span.author-born-date ::text').get())
-        loader.add_value('born_location', response.css('span.author-born-location ::text').get())
-        loader.add_value('description', response.css('div.author-description ::text').get())
+        loader.add_css('born_date', 'span.author-born-date ::text')
+        loader.add_css('born_location', 'span.author-born-location ::text')
+        loader.add_css('description', 'div.author-description ::text')
 
         yield loader.load_item()
